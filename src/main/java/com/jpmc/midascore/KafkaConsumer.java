@@ -1,7 +1,5 @@
 package com.jpmc.midascore;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import com.jpmc.midascore.foundation.Transaction;
 import com.jpmc.midascore.foundation.Balance;
 import com.jpmc.midascore.entity.*;
