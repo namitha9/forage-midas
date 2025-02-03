@@ -1,11 +1,12 @@
 package com.jpmc.midascore;
 
-import com.jpmc.midascore.foundation.Transaction;
-import com.jpmc.midascore.foundation.Balance;
+import com.jpmc.midascore.foundation.*;
 import com.jpmc.midascore.entity.*;
 import com.jpmc.midascore.repository.*;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.Optional;
 
@@ -14,10 +15,12 @@ public class KafkaConsumer {
 
     private UserRepository userRepository;
     private TransactionRecordRepository transactionRecordRepository;
+    private RestTemplate restTemplate;
 
-    public KafkaConsumer(UserRepository userRepository, TransactionRecordRepository transactionRecordRepository) {
+    public KafkaConsumer(UserRepository userRepository, TransactionRecordRepository transactionRecordRepository, RestTemplate restTemplate) {
         this.userRepository = userRepository;
         this.transactionRecordRepository = transactionRecordRepository;
+        this.restTemplate = restTemplate;
     }
 
     @KafkaListener(topics = "${general.kafka-topic}", groupId = "transaction-group")
@@ -37,11 +40,21 @@ public class KafkaConsumer {
             TransactionRecord transactionRecord = new TransactionRecord(sender, recipient, transaction.getAmount());
             transactionRecordRepository.save(transactionRecord);
 
+            // Try and catch when calling the api
+            float incentiveAmount = 0;
+            try {
+                incentiveAmount = getIncentiveApi(transaction).getAmount();
+                System.out.println("Incentive amount: " + incentiveAmount);
+            } catch
+            (Exception e) {
+                System.out.println("Error occurred while calling Incentive Api " + e);
+            }
+
             // Update balance of sender
             sender.setBalance(sender.getBalance() - transaction.getAmount());
 
             // Update balance of recipient
-            recipient.setBalance(recipient.getBalance() + transaction.getAmount());
+            recipient.setBalance(recipient.getBalance() + transaction.getAmount()+incentiveAmount);
 
             // Persist updated users with their new balances
             userRepository.save(sender);
@@ -63,5 +76,10 @@ public class KafkaConsumer {
         } else {
             return new Balance(finalBalance);
         }
+    }
+
+    public Incentive getIncentiveApi(Transaction transaction) {
+        String url = "http://localhost:8080/incentive";
+        return restTemplate.postForObject(url, transaction, Incentive.class);
     }
 }

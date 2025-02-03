@@ -23,3 +23,5 @@ spring:
 general:
   kafka-topic: transactions-topic
   bootstrap-servers: localhost:9092
+server:
+  port: 33400
